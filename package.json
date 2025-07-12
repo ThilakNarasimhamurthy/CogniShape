@@ -1,0 +1,22 @@
+{
+  "name": "neuronest",
+  "version": "1.0.0",
+  "description": "NeuroNest - Autism Screening Application with GPT-4 Integration",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && uvicorn main:app --reload --port 8000",
+    "frontend:dev": "cd frontend && npm start",
+    "backend:install": "cd backend && pip install -r requirements.txt",
+    "frontend:install": "cd frontend && npm install",
+    "install": "npm run backend:install && npm run frontend:install",
+    "build": "cd frontend && npm run build",
+    "start": "npm run backend:dev"
+  },
+  "keywords": ["autism", "screening", "gpt-4", "healthcare", "ai"],
+  "author": "NeuroNest Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
