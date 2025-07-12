@@ -1,4 +1,4 @@
-# 🧠 NeuroNest - Autism Screening Application
+# 🧠 CogniShape - Autism Screening Application
 
 NeuroNest is a comprehensive autism screening application that uses GPT-4 powered AI analysis to assess behavioral patterns through interactive gameplay. The application provides real-time monitoring, detailed reports, and evidence-based insights for parents and healthcare professionals.
 
