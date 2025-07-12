@@ -71,8 +71,8 @@ setup_environment() {
     if [ ! -f .env ]; then
         log_info "Creating .env file..."
         cat > .env << EOF
-# OpenAI Configuration
-OPENAI_API_KEY=your-openai-api-key-here
+# Google Gemini Configuration
+GEMINI_API_KEY=your-gemini-api-key-here
 
 # Razorpay Configuration
 RAZORPAY_KEY_ID=your-razorpay-key-id

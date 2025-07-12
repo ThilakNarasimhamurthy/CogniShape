@@ -14,6 +14,7 @@ import CaretakerPanel from './pages/CaretakerPanel';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Payment from './pages/Payment';
+import PaymentTest from './pages/PaymentTest';
 import Landing from './pages/Landing';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -127,6 +128,11 @@ function AppContent() {
           <Route path="/payment/:type" element={
             <ProtectedRoute>
               <Payment />
+            </ProtectedRoute>
+          } />
+          <Route path="/payment-test" element={
+            <ProtectedRoute>
+              <PaymentTest />
             </ProtectedRoute>
           } />
           

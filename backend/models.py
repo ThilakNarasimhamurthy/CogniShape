@@ -98,3 +98,9 @@ class PaymentHistory(Base):
     status = Column(String, default="pending")  # 'pending', 'completed', 'failed'
     payment_type = Column(String)  # 'report_unlock', 'license_upgrade'
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# At the end of your models.py file
+def register_models():
+    """Ensure all models are imported and registered"""
+    return [User, ChildProfile, SessionLog, DiagnosticReport, LicenseUsage, PaymentHistory]

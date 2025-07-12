@@ -15,12 +15,21 @@ import {
 } from 'lucide-react';
 import { api } from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState([]);
+  const [showAddChildModal, setShowAddChildModal] = useState(false);
+  const [childForm, setChildForm] = useState({
+    name: '',
+    age: '',
+    gender: '',
+    special_interest: ''
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -35,6 +44,22 @@ const Dashboard = () => {
       console.error('Failed to fetch profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddChild = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.post('/children/create', childForm);
+      setShowAddChildModal(false);
+      setChildForm({ name: '', age: '', gender: '', special_interest: '' });
+      toast.success('Child profile created successfully');
+      await fetchUserProfile();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create child profile');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -163,7 +188,7 @@ const Dashboard = () => {
                   </h3>
                   {licenseUsage.used_slots < licenseUsage.total_slots && (
                     <button
-                      onClick={() => {/* Add child modal logic */}}
+                      onClick={() => setShowAddChildModal(true)}
                       className="btn btn-primary flex items-center space-x-2"
                     >
                       <Plus className="h-4 w-4" />
@@ -183,7 +208,7 @@ const Dashboard = () => {
                     </p>
                     <div className="mt-6">
                       <button
-                        onClick={() => {/* Add child modal logic */}}
+                        onClick={() => setShowAddChildModal(true)}
                         className="btn btn-primary"
                       >
                         <Plus className="h-4 w-4 mr-2" />
@@ -260,7 +285,7 @@ const Dashboard = () => {
                 <div className="space-y-3">
                   {licenseUsage.used_slots < licenseUsage.total_slots && (
                     <button
-                      onClick={() => {/* Add child modal logic */}}
+                      onClick={() => setShowAddChildModal(true)}
                       className="w-full btn btn-primary flex items-center justify-center space-x-2"
                     >
                       <Plus className="h-4 w-4" />
@@ -351,6 +376,86 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      {showAddChildModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowAddChildModal(false)}></div>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <form onSubmit={handleAddChild}>
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                    Add {user?.role === 'doctor' ? 'Patient' : 'Child'} Profile
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <input
+                        type="text"
+                        required
+                        className="input"
+                        value={childForm.name}
+                        onChange={(e) => setChildForm(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        max="18"
+                        className="input"
+                        value={childForm.age}
+                        onChange={(e) => setChildForm(prev => ({ ...prev, age: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                      <select
+                        required
+                        className="input"
+                        value={childForm.gender}
+                        onChange={(e) => setChildForm(prev => ({ ...prev, gender: e.target.value }))}
+                      >
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Special Interests</label>
+                      <input
+                        type="text"
+                        className="input"
+                        placeholder="e.g., animals, trains, music"
+                        value={childForm.special_interest}
+                        onChange={(e) => setChildForm(prev => ({ ...prev, special_interest: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn btn-primary sm:ml-3 sm:w-auto"
+                  >
+                    {saving ? 'Creating...' : 'Create Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddChildModal(false)}
+                    className="btn btn-outline mt-3 sm:mt-0 sm:w-auto"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

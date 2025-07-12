@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect, Path, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ load_dotenv()
 from database import engine, SessionLocal, get_db
 from models import User, ChildProfile, SessionLog, DiagnosticReport, LicenseUsage
 from auth import verify_token, create_access_token, hash_password, verify_password
-from ai_agent import analyze_behavior, generate_game_config
+from ai_agent import generate_game_config
 from payments import create_razorpay_order, verify_razorpay_payment
 from game_manager import GameManager
 
@@ -266,12 +266,12 @@ async def log_session(session_data: SessionData, current_user: User = Depends(ge
             "behavioral_notes": session_data.behavioral_notes
         }
         
-        ai_analysis = await analyze_behavior(json.dumps(session_summary))
+        # ai_analysis = await analyze_behavior(json.dumps(session_summary)) # This line is removed
         
         return {
             "message": "Session logged successfully",
             "session_id": str(session_log.id),
-            "ai_analysis": ai_analysis
+            # "ai_analysis": ai_analysis # This line is removed
         }
     except Exception as e:
         logger.error(f"Session logging error: {str(e)}")
@@ -329,6 +329,21 @@ async def get_child_reports(child_id: str, current_user: User = Depends(get_curr
         logger.error(f"Reports fetch error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch reports")
 
+@app.get("/children/{child_id}")
+async def get_child(child_id: str, current_user: User = Depends(get_current_user), db = Depends(get_db)):
+    child = db.query(ChildProfile).filter(ChildProfile.id == child_id, ChildProfile.user_id == current_user.id).first()
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    return {
+        "id": str(child.id),
+        "name": child.name,
+        "age": child.age,
+        "gender": child.gender,
+        "special_interest": child.special_interest,
+        "diagnosis_status": child.diagnosis_status,
+        "created_at": child.created_at
+    }
+
 @app.post("/payments/create-order")
 async def create_payment_order(order_data: PaymentOrder, current_user: User = Depends(get_current_user)):
     try:
@@ -337,11 +352,25 @@ async def create_payment_order(order_data: PaymentOrder, current_user: User = De
             "order_id": order["id"],
             "amount": order["amount"],
             "currency": order["currency"],
-            "key": os.getenv("RAZORPAY_KEY_ID")
+            "key": "dummy_key_12345"  # Dummy key for frontend
         }
     except Exception as e:
         logger.error(f"Payment order creation error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create payment order")
+
+@app.post("/payments/process")
+async def process_payment(payment_data: dict, current_user: User = Depends(get_current_user)):
+    """Process a dummy payment."""
+    try:
+        from payments import process_dummy_payment
+        result = process_dummy_payment(
+            payment_data["order_id"],
+            payment_data.get("payment_method", "card")
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Payment processing error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process payment")
 
 @app.post("/payments/verify")
 async def verify_payment(payment_data: dict, current_user: User = Depends(get_current_user)):
@@ -349,7 +378,7 @@ async def verify_payment(payment_data: dict, current_user: User = Depends(get_cu
         is_valid = verify_razorpay_payment(
             payment_data["order_id"],
             payment_data["payment_id"],
-            payment_data["signature"]
+            payment_data.get("signature", "")
         )
         
         if is_valid:
@@ -360,24 +389,227 @@ async def verify_payment(payment_data: dict, current_user: User = Depends(get_cu
         logger.error(f"Payment verification error: {str(e)}")
         raise HTTPException(status_code=500, detail="Payment verification failed")
 
+@app.get("/payments/pricing")
+async def get_pricing_info(current_user: User = Depends(get_current_user)):
+    """Get pricing information for different services."""
+    try:
+        from payments import PRICING
+        return {
+            "pricing": PRICING,
+            "currency": "USD",
+            "message": "Dummy payment system - all payments are simulated"
+        }
+    except Exception as e:
+        logger.error(f"Pricing fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch pricing")
+
+@app.post("/payments/create-subscription-order")
+async def create_subscription_order(
+    subscription_type: str = Body(...),
+    currency: str = Body("USD"),
+    current_user: User = Depends(get_current_user)
+):
+    """Create order for subscription upgrade."""
+    try:
+        from payments import create_subscription_order
+        order = create_subscription_order(str(current_user.role), subscription_type, currency)
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key": "dummy_key_12345"
+        }
+    except Exception as e:
+        logger.error(f"Subscription order creation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create subscription order")
+
+@app.post("/payments/create-license-upgrade-order")
+async def create_license_upgrade_order(
+    currency: str = Body("USD"),
+    current_user: User = Depends(get_current_user)
+):
+    """Create order for license upgrade."""
+    try:
+        from payments import create_license_upgrade_order
+        order = create_license_upgrade_order(str(current_user.role), currency)
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key": "dummy_key_12345"
+        }
+    except Exception as e:
+        logger.error(f"License upgrade order creation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create license upgrade order")
+
+@app.post("/payments/create-report-unlock-order")
+async def create_report_unlock_order(
+    child_id: str = Body(...),
+    currency: str = Body("USD"),
+    current_user: User = Depends(get_current_user)
+):
+    """Create order for report unlock."""
+    try:
+        from payments import create_report_unlock_order
+        order = create_report_unlock_order(child_id, currency)
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key": "dummy_key_12345"
+        }
+    except Exception as e:
+        logger.error(f"Report unlock order creation error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create report unlock order")
+
+@app.get("/payments/history")
+async def get_payment_history(current_user: User = Depends(get_current_user)):
+    """Get payment history for the current user."""
+    try:
+        from payments import dummy_payment_manager
+        payments = dummy_payment_manager.get_payment_history()
+        return {
+            "payments": payments,
+            "total_payments": len(payments)
+        }
+    except Exception as e:
+        logger.error(f"Payment history fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch payment history")
+
 @app.websocket("/ws/{child_id}")
 async def websocket_endpoint(websocket: WebSocket, child_id: str):
+    import logging
+    logging.info(f"WebSocket connection attempt for child {child_id}")
     await websocket.accept()
-    game_manager.add_connection(child_id, websocket)
-    
+    logging.info(f"WebSocket accepted for child {child_id}")
+    await game_manager.add_connection(child_id, websocket)
+
+    # Start game session for the child connection
+    from models import ChildProfile, SessionLog
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        child = db.query(ChildProfile).filter(ChildProfile.id == child_id).first()
+        if not child:
+            import logging
+            logging.error(f"Child with id {child_id} not found. Closing WebSocket.")
+            await websocket.close()
+            return
+        
+        previous_sessions = db.query(SessionLog).filter(SessionLog.child_id == child_id).all()
+        # Convert previous_sessions to plain dicts (avoid SQLAlchemy InstanceState)
+        previous_sessions_dicts = [
+            {
+                "id": str(s.id),
+                "level": s.level,
+                "completion_time": s.completion_time,
+                "errors": s.errors,
+                "reaction_time": s.reaction_time,
+                "surprise_triggered": s.surprise_triggered,
+                "abandoned": s.abandoned,
+                "behavioral_notes": s.behavioral_notes,
+                "game_data": s.game_data,
+                "created_at": s.created_at.isoformat() if s.created_at is not None else None
+            }
+            for s in previous_sessions
+        ]
+        child_profile = {
+            "id": str(child.id),
+            "name": child.name,
+            "age": child.age,
+            "gender": child.gender,
+            "special_interest": child.special_interest
+        }
+        
+        # Generate game config with fallback
+        try:
+            from ai_agent import generate_game_config
+            game_config = generate_game_config(child_profile, previous_sessions_dicts)
+        except Exception as e:
+            import logging
+            logging.error(f"AI config generation failed, using fallback: {e}")
+            # Fallback config
+            game_config = {
+                "level_config": {
+                    "difficulty": 2,
+                    "shapes": ["circle", "square", "triangle"],
+                    "colors": ["red", "blue", "green", "yellow"],
+                    "sounds": True,
+                    "animation_speed": 1.0,
+                    "surprise_elements": ["color_change", "size_change"]
+                },
+                "assessment_focus": ["attention", "motor_skills", "pattern_recognition"],
+                "session_duration": 10,
+                "break_intervals": 3,
+                "motivation_elements": ["celebration_sounds", "progress_indicators"]
+            }
+        
+        # Always start the game session
+        logging.info(f"Starting game session for child {child_id} with config: {game_config}")
+        await game_manager.start_game_session(child_id, game_config)
+        logging.info(f"Game session started successfully for child {child_id}")
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to start game session: {e}")
+        # Send a basic session start even if everything else fails
+        try:
+            fallback_config = {
+                "level_config": {
+                    "difficulty": 1,
+                    "shapes": ["circle", "square"],
+                    "colors": ["red", "blue"],
+                    "sounds": False,
+                    "animation_speed": 1.0,
+                    "surprise_elements": []
+                }
+            }
+            await game_manager.start_game_session(child_id, fallback_config)
+        except Exception as fallback_error:
+            logging.error(f"Even fallback session start failed: {fallback_error}")
+    finally:
+        db.close()
+
     try:
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
+            logging.info(f"Received WebSocket message from {child_id}: {message['type']}")
             
-            # Handle real-time game events
             if message["type"] == "game_event":
                 await game_manager.broadcast_to_caretakers(child_id, message)
+                logging.info(f"Game event broadcasted to caretakers for {child_id}")
             elif message["type"] == "control_command":
+                logging.info(f"Control command received for {child_id}: {message}")
                 await game_manager.send_control_to_child(child_id, message)
-                
+            elif message["type"] in ["session_started", "game_paused", "game_resumed", "session_ended"]:
+                # Route session state messages to caretakers
+                await game_manager.broadcast_to_caretakers(child_id, message)
+                logging.info(f"Session state message broadcasted to caretakers for {child_id}: {message['type']}")
+            else:
+                logging.info(f"Unhandled message type: {message['type']}")
     except WebSocketDisconnect:
-        game_manager.remove_connection(child_id, websocket)
+        logging.info(f"WebSocket disconnected for {child_id}")
+        await game_manager.remove_connection(child_id, websocket)
+
+@app.post("/ai/game-config")
+async def ai_game_config(
+    child_id: str = Body(...),
+    age: int = Body(...),
+    interests: str = Body(...),
+    current_user: User = Depends(get_current_user)
+):
+    # Example: Generate a simple config based on age/interests
+    config = {
+        "level_config": {
+            "level": 1,
+            "difficulty": "easy" if age < 8 else "medium",
+            "interests": interests.split(",") if interests else [],
+            "shapes": ["circle", "square", "triangle"],
+            "colors": ["red", "blue", "green", "yellow"]
+        }
+    }
+    return config
 
 if __name__ == "__main__":
     import uvicorn

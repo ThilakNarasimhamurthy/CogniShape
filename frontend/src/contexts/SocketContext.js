@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
@@ -13,52 +12,15 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-  const [socket, setSocket] = useState(null);
-  const [connected, setConnected] = useState(false);
   const [gameEvents, setGameEvents] = useState([]);
   const [liveGameData, setLiveGameData] = useState(null);
   const { user, token } = useAuth();
 
-  useEffect(() => {
-    if (user && token) {
-      // Create socket connection with auth token
-      const newSocket = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000', {
-        auth: {
-          token: token
-        },
-        transports: ['websocket', 'polling']
-      });
-
-      newSocket.on('connect', () => {
-        console.log('Socket connected');
-        setConnected(true);
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
-        setConnected(false);
-      });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-        setConnected(false);
-      });
-
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.close();
-      };
-    }
-  }, [user, token]);
-
+  // Native WebSocket connection for game/caretaker
   const connectToChild = (childId, connectionType = 'caretaker') => {
-    if (!socket) return null;
-
-    // Create a WebSocket connection specifically for this child
-    const gameSocket = new WebSocket(
-      `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/${childId}?type=${connectionType}&token=${token}`
-    );
+    if (!user || !token) return null;
+    const wsUrl = `${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/${childId}?type=${connectionType}&token=${token}`;
+    const gameSocket = new window.WebSocket(wsUrl);
 
     gameSocket.onopen = () => {
       console.log(`Connected to child ${childId} as ${connectionType}`);
@@ -85,11 +47,9 @@ export const SocketProvider = ({ children }) => {
       case 'connection_confirmed':
         console.log('Connection confirmed:', data);
         break;
-      
       case 'game_event':
         setGameEvents(prev => [...prev, data.event]);
         break;
-      
       case 'session_started':
         setLiveGameData({
           sessionId: data.session_id,
@@ -99,7 +59,6 @@ export const SocketProvider = ({ children }) => {
           startedAt: data.timestamp
         });
         break;
-      
       case 'session_ended':
         setLiveGameData(prev => prev ? {
           ...prev,
@@ -108,7 +67,6 @@ export const SocketProvider = ({ children }) => {
           endedAt: data.timestamp
         } : null);
         break;
-      
       case 'surprise_triggered':
         setGameEvents(prev => [...prev, {
           type: 'surprise',
@@ -116,7 +74,6 @@ export const SocketProvider = ({ children }) => {
           timestamp: data.timestamp
         }]);
         break;
-      
       case 'game_paused':
         setLiveGameData(prev => prev ? {
           ...prev,
@@ -124,7 +81,6 @@ export const SocketProvider = ({ children }) => {
           pauseDuration: data.duration
         } : null);
         break;
-      
       default:
         console.log('Unhandled game message:', data);
     }
@@ -186,8 +142,6 @@ export const SocketProvider = ({ children }) => {
   };
 
   const value = {
-    socket,
-    connected,
     gameEvents,
     liveGameData,
     connectToChild,

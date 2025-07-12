@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from fastapi import WebSocket
 from datetime import datetime
 import uuid
@@ -97,7 +97,7 @@ class GameManager:
             
         try:
             await child_ws.send_text(json.dumps(control_message))
-            logger.info(f"Control message sent to child {child_id}: {control_message['type']}")
+            logger.info(f"Control message sent to child {child_id}: {control_message}")
         except Exception as e:
             logger.error(f"Failed to send control message to child {child_id}: {str(e)}")
             # Remove broken connection
@@ -224,7 +224,7 @@ class GameManager:
             if session["status"] == "active"
         ]
     
-    def get_session_data(self, session_id: str) -> Dict[str, Any]:
+    def get_session_data(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get session data by session ID."""
         return self.active_sessions.get(session_id)
     

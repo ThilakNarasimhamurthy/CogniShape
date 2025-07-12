@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "neuronest-frontend",
+  "name": "cognishape-frontend",
   "builds": [
     {
       "src": "frontend/package.json",
@@ -32,5 +32,10 @@
   "installCommand": "cd frontend && npm install",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/build",
-  "framework": "create-react-app"
+  "framework": "create-react-app",
+  "functions": {
+    "frontend/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  }
 }

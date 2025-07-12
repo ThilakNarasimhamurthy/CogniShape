@@ -1,16 +1,27 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-# Database URL - use NeonDB or local PostgreSQL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/neuronest")
+# Get Database URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
+
+print(f"Using DATABASE_URL: {DATABASE_URL}")
+
+try:
+    # Create SQLAlchemy engine
+    engine = create_engine(DATABASE_URL, echo=True)  # echo=True for debugging
+    print("SUCCESS: Database engine created successfully")
+except Exception as e:
+    print(f"ERROR creating database engine: {e}")
+    raise
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -28,5 +39,30 @@ def get_db():
 
 # Initialize database
 def init_db():
-    import models
-    Base.metadata.create_all(bind=engine)
+    # Import models to register them with Base
+    try:
+        import models  # Direct import for Docker environment
+        print("Models imported successfully")
+    except ImportError as e:
+        print(f"Failed to import models: {e}")
+        raise
+    
+    # Create tables
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+        raise
+
+# Test database connection
+def test_connection():
+    """Test if database connection works"""
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT 1"))
+            print("Database connection test: SUCCESS")
+            return True
+    except Exception as e:
+        print(f"Database connection test: FAILED - {e}")
+        return False

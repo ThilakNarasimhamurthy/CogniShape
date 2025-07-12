@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
 
-  # Backend API
+  # Backend FastAPI
   backend:
     build:
       context: ./backend
@@ -42,10 +42,9 @@ services:
       - DATABASE_URL=postgresql://neuronest_user:neuronest_password@postgres:5432/neuronest
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SECRET_KEY=development-secret-key-change-in-production
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
       - DEBUG=True
       - HOST=0.0.0.0
       - PORT=8000

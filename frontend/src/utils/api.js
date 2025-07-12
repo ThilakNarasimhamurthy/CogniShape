@@ -59,7 +59,6 @@ export const sessionAPI = {
   log: (sessionData) => api.post('/session/log', sessionData),
   getHistory: (childId) => api.get(`/session/history/${childId}`),
   getSession: (sessionId) => api.get(`/session/${sessionId}`),
-  startSession: (childId, config) => api.post('/session/start', { child_id: childId, config }),
   endSession: (sessionId, summary) => api.post(`/session/${sessionId}/end`, summary),
 };
 
